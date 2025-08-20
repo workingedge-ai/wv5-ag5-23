@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Index from "./pages/Index";
 import Apps from "./pages/Apps";
 import Restaurant from "./pages/Restaurant";
@@ -13,9 +14,13 @@ import References from "./pages/References";
 import Booking from "./pages/Booking";
 import AgenticText from "./pages/AgenticText";
 import NotFound from "./pages/NotFound";
+import MobileHome from "./pages/MobileHome";
+import MobileRestaurant from "./pages/MobileRestaurant";
 import AIOrb from "./components/AIOrb";
 import AgenticModeOverlay from "./components/AgenticModeOverlay";
 import UnifiedHeader from "./components/UnifiedHeader";
+import MobileHeader from "./components/MobileHeader";
+import MobileAccessControl from "./components/MobileAccessControl";
 import WeatherBackground from "./components/WeatherBackground";
 import { useAgenticMode } from "./hooks/useAgenticMode";
 import { useUniversalNavigation, NavigationContext } from "./hooks/useUniversalNavigation";
@@ -83,7 +88,27 @@ const AIGlobalState = () => {
 const AppContent = () => {
   const agenticMode = useAgenticMode();
   const navigation = useUniversalNavigation();
+  const isMobile = useIsMobile();
 
+  // Mobile Version
+  if (isMobile) {
+    return (
+      <MobileAccessControl>
+        <NavigationEventListener />
+        <MobileHeader />
+        
+        <main className="min-h-screen bg-black">
+          <Routes>
+            <Route path="/" element={<MobileHome />} />
+            <Route path="/restaurant" element={<MobileRestaurant />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </MobileAccessControl>
+    );
+  }
+
+  // Desktop Version
   return (
     <NavigationContext.Provider value={navigation}>
       <NavigationEventListener />
