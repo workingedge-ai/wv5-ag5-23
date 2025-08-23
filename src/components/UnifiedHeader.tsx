@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import OrbWithAI from './OrbWithAI';
+import AIOrb from './AIOrb';
 
 interface UnifiedHeaderProps {
   focused: boolean;
@@ -53,7 +53,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
 
       {/* AI Orb on the absolute right */}
       <div className="flex items-center">
-        <OrbWithAI focused={focused && focusedIndex === 5} size="small" />
+        <AIOrb focused={focused && focusedIndex === 5} />
       </div>
     </div>
   );
