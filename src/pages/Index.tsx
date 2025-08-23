@@ -12,7 +12,7 @@ const Index = () => {
         {/* Welcome Message */}
         <div className="px-6 md:px-8 mb-8">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-medium text-white">
+            <h1 className="text-2xl font-medium text-white my-[20px]">
               Welcome {guestName}, what would you like to do?
             </h1>
           </div>
