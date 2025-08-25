@@ -36,7 +36,7 @@ const NewsWidget: React.FC = () => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % newsItems.length);
         setIsVisible(true);
       }, 500); // Wait for fade out before changing content
-    }, 5000); // Change every 5 seconds
+    }, 180000); // Change every 3 minutes
 
     return () => clearInterval(interval);
   }, []);
@@ -44,7 +44,7 @@ const NewsWidget: React.FC = () => {
   const currentNews = newsItems[currentIndex];
 
   return (
-    <Card className="h-full bg-background/10 border-border/20 backdrop-blur-sm">
+    <Card className="h-full bg-background/10 border-border/20 backdrop-blur-sm rounded-2xl box-border">
       <div className="p-4 h-full flex flex-col justify-center">
         <div className={`transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <h3 className="text-sm font-semibold text-foreground mb-2">News</h3>

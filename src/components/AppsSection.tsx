@@ -41,13 +41,13 @@ const AppsSection: React.FC = () => {
           <Card 
             key={index}
             onClick={() => handleAppClick(app.url)}
-            className="flex-shrink-0 w-20 h-20 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105"
+            className="flex-shrink-0 w-32 h-20 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105 rounded-2xl"
           >
             <div className="w-full h-full p-2 flex flex-col items-center justify-center">
               <img 
                 src={app.icon} 
                 alt={app.name}
-                className="w-8 h-8 rounded-md object-cover mb-1"
+                className="w-10 h-10 rounded-xl object-cover mb-1"
               />
               <span className="text-xs text-foreground text-center font-medium truncate w-full">
                 {app.name}
