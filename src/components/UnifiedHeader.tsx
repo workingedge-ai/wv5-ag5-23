@@ -38,7 +38,8 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
           
           return (
             <button 
-              key={item.path} 
+              key={item.path}
+              id={`header-button-${index}`}
               onClick={() => handleNavClick(item.path, index)} 
               className={`
                 h-10 text-sm font-medium rounded-full px-4 flex items-center whitespace-nowrap transform transition-all duration-300
@@ -53,7 +54,9 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
 
       {/* AI Orb on the absolute right */}
       <div className="flex items-center">
-        <AIOrb focused={focused && focusedIndex === 5} />
+        <div id="header-button-3">
+          <AIOrb focused={focused && focusedIndex === 3} />
+        </div>
       </div>
     </div>
   );

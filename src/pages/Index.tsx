@@ -2,9 +2,14 @@ import React, { useEffect } from "react";
 import SuggestionsWidget from '@/components/SuggestionsWidget';
 import NewsWidget from '@/components/NewsWidget';
 import AppsSection from '@/components/AppsSection';
+import TimeWeatherWidget from '@/components/TimeWeatherWidget';
+import { useHomeKeyboardNavigation } from '@/hooks/useHomeKeyboardNavigation';
 const Index = () => {
   // Get guest name from localStorage (set during mobile access control)
   const guestName = localStorage.getItem('mobile-guest-name') || 'Guest';
+  
+  // Keyboard navigation for home page
+  const navigation = useHomeKeyboardNavigation(5); // 5 apps
 
   // Scroll to top on page load and completely prevent scrolling
   useEffect(() => {
@@ -70,10 +75,16 @@ const Index = () => {
   <div className="px-6 md:px-10 mt-16">
           <div className="max-w-8xl mx-auto">
             
-            <AppsSection />
+            <AppsSection 
+              focused={navigation.currentSection === 'apps'}
+              focusedIndex={navigation.focusedIndex}
+            />
           </div>
         </div>
       </div>
+      
+      {/* Time and Weather Widget */}
+      <TimeWeatherWidget />
     </div>;
 };
 export default Index;
