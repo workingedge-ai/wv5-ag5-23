@@ -1,4 +1,7 @@
 import React, { useEffect } from "react";
+import SuggestionsWidget from '@/components/SuggestionsWidget';
+import NewsWidget from '@/components/NewsWidget';
+import AppsSection from '@/components/AppsSection';
 const Index = () => {
   // Get guest name from localStorage (set during mobile access control)
   const guestName = localStorage.getItem('mobile-guest-name') || 'Guest';
@@ -18,10 +21,36 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Content area - reserved for future elements */}
+        {/* Widget Section */}
+        <div className="px-6 md:px-8 mb-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex gap-4 h-40">
+              {/* Main Widget - 60% width */}
+              <div className="w-3/5 bg-background/5 border border-border/20 rounded-lg backdrop-blur-sm">
+                {/* Reserved for future content */}
+              </div>
+              
+              {/* Side Widgets - 40% width */}
+              <div className="w-2/5 flex flex-col gap-4">
+                {/* Suggestions Widget - Top half */}
+                <div className="h-1/2">
+                  <SuggestionsWidget />
+                </div>
+                
+                {/* News Widget - Bottom half */}
+                <div className="h-1/2">
+                  <NewsWidget />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Apps Section */}
         <div className="px-6 md:px-8">
           <div className="max-w-7xl mx-auto">
-            {/* This area is intentionally left blank for future content */}
+            <h2 className="text-lg font-medium text-white mb-4">Apps</h2>
+            <AppsSection />
           </div>
         </div>
       </div>
