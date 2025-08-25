@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
 
 const TimeWeatherWidget: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather] = useState({
-    temp: 72,
-    condition: 'Sunny',
-    icon: '☀️'
+    city: 'Coimbatore',
+    humidity: 73,
+    icon: '🌤️', // You can use a more accurate icon or an image
+    condition: 'Rain',
   });
 
   useEffect(() => {
@@ -34,23 +34,25 @@ const TimeWeatherWidget: React.FC = () => {
   };
 
   return (
-    <Card className="fixed bottom-6 right-6 z-50 bg-background/10 border-border/20 backdrop-blur-sm rounded-[20px] p-4 min-w-[160px]">
-      <div className="text-center text-white">
-        <div className="text-2xl font-light mb-1">
-          {formatTime(currentTime)}
-        </div>
-        <div className="text-sm text-gray-300 mb-3">
-          {formatDate(currentTime)}
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-lg">{weather.icon}</span>
-          <div className="text-right">
-            <div className="text-lg font-medium">{weather.temp}°</div>
-            <div className="text-xs text-gray-400">{weather.condition}</div>
-          </div>
-        </div>
+  <div className="fixed bottom-8 right-8 z-50 rounded-[16px] min-w-[220px] w-fit px-5 py-2 flex items-center bg-transparent" style={{background: 'transparent'}}>
+      {/* Time */}
+      <div className="flex flex-row items-end">
+        <span className="text-[2.1rem] leading-none font-light text-white" style={{fontFamily: 'Poppins, sans-serif'}}>{formatTime(currentTime).split(' ')[0]}</span>
+        <span className="text-base text-gray-300 ml-2 mb-1" style={{fontFamily: 'Poppins, sans-serif'}}>{formatTime(currentTime).split(' ')[1].toLowerCase()}</span>
       </div>
-    </Card>
+      {/* Divider */}
+  <div className="mx-3 h-8 w-px bg-gray-700"></div>
+      {/* City, Humidity, Weather */}
+      <div className="flex flex-col justify-center">
+        <span className="text-[1.4rem] font-light text-white" style={{fontFamily: 'Poppins, sans-serif'}}>{weather.city}</span>
+        <span className="text-base text-gray-400 -mt-2" style={{fontFamily: 'Poppins, sans-serif'}}>Humidity {weather.humidity}</span>
+      </div>
+      {/* Weather Icon */}
+      <div className="ml-3 flex items-center">
+        {/* Replace with an actual image/icon if needed */}
+        <span className="text-[1.6rem] drop-shadow-[0_0_8px_rgba(0,0,0,0.5)]">{weather.icon}</span>
+      </div>
+    </div>
   );
 };
 

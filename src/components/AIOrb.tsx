@@ -68,25 +68,18 @@ const AIOrb: React.FC<AIOrbProps> = ({
       setFocused(focused);
     }
   }, [focused, isFocused, setFocused]);
-  return <button id="ai-orb-button" onClick={handleClick} aria-expanded={isConnected && !isMuted} className={`
-        h-10 text-sm font-medium transition-all duration-700 ease-out rounded-full px-4 flex items-center whitespace-nowrap relative overflow-hidden
-        ${isOrbFocused ? 'bg-white text-black shadow-lg' : 'text-gray-300 hover:text-white hover:bg-white/10'}
-        ${isConnected && !isMuted ? 'text-white bg-black/20 w-full h-12 justify-center px-6' : ''}
-      `}>
-      <div className={`flex items-center gap-2 transition-all duration-700 ease-out w-full justify-center ${isConnected && !isMuted ? 'px-4' : ''}`}>
-        <span className={`transition-all duration-500 font-normal text-sm ${isConnected && !isMuted ? 'text-indigo-200 text-base' : 'text-indigo-500'}`}>Atlas AI</span>
-        
-        {/* Waveform Animation when active and not muted - smooth entrance/exit */}
-        <div className={`
-          flex items-center gap-0.5 transition-all duration-700 ease-out overflow-hidden
-          ${shouldShowWaveform ? 'max-w-[120px] opacity-100 ml-4' : 'max-w-0 opacity-0 ml-0'}
-        `}>
-          <div className="w-0.5 h-4 bg-ai-blue rounded-full animate-waveform"></div>
-          <div className="w-0.5 h-6 bg-ai-blue rounded-full animate-waveform-delayed"></div>
-          <div className="w-0.5 h-3 bg-ai-blue rounded-full animate-waveform-delayed-2"></div>
-          <div className="w-0.5 h-4 bg-ai-blue rounded-full animate-waveform"></div>
-        </div>
-      </div>
-    </button>;
+  return (
+    <button
+      id="ai-orb-button"
+      onClick={handleClick}
+      className={`
+        w-14 h-14 flex items-center justify-center rounded-full transition-all duration-300 font-bold text-xl
+        ${isOrbFocused ? 'bg-white text-black shadow-lg' : 'bg-gray-700 text-white hover:bg-white/10'}
+      `}
+      style={{ outline: 'none', border: 'none' }}
+    >
+      AI
+    </button>
+  );
 };
 export default AIOrb;

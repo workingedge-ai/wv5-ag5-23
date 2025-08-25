@@ -31,6 +31,21 @@ const AppsSection: React.FC<AppsSectionProps> = ({ focused, focusedIndex }) => {
     window.open(url, '_blank');
   };
   
+  // Move focused app to the first position
+  const orderedApps = focused
+    ? [apps[focusedIndex], ...apps.filter((_, idx) => idx !== focusedIndex)]
+    : apps;
+
+  // Restore original order, but scroll focused card into view
+  React.useEffect(() => {
+    if (focused) {
+      const el = document.getElementById(`app-${focusedIndex}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+      }
+    }
+  }, [focused, focusedIndex]);
+
   return (
     <div id="apps-section" className="w-full">
       <div 
@@ -39,23 +54,29 @@ const AppsSection: React.FC<AppsSectionProps> = ({ focused, focusedIndex }) => {
       >
         {apps.map((app, index) => {
           const isFocused = focused && focusedIndex === index;
-          
           return (
             <Card
-              key={index}
+              key={app.name}
               id={`app-${index}`}
               onClick={() => handleAppClick(app.url)}
               className={`
-                flex-shrink-0 w-64 h-44 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer transition-all duration-200 rounded-2xl p-0
-                ${isFocused ? 'bg-background/30 scale-105 ring-2 ring-white/50' : 'hover:bg-background/20 hover:scale-105'}
+                flex-shrink-0 w-80 h-44 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer transition-all duration-200 rounded-[30px] p-0
+                ${isFocused ? 'bg-background/30' : 'hover:bg-background/20'}
               `}
             >
               <div className="w-full h-full relative">
                 <img
                   src={app.icon}
                   alt={app.name}
-                  className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl"
+                  className="absolute top-0 left-0 w-full h-full object-cover rounded-[30px]"
                   style={{ zIndex: 1 }}
+                />
+                <div
+                  className={`absolute inset-0 rounded-[30px] border-2 border-white pointer-events-none transition-opacity duration-200 ${isFocused ? 'opacity-100' : 'opacity-0'}`}
+                  style={isFocused ? {
+                    zIndex: 2,
+                    boxShadow: 'inset 0 0 8px 2px rgba(255,255,255,0.5)'
+                  } : { zIndex: 2 }}
                 />
               </div>
             </Card>

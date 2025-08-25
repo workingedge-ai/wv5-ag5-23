@@ -28,8 +28,11 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
     navigate(path);
   };
 
+  // Prevent focus from moving out of header when pressing right arrow on last button
+  // This is handled in Index.tsx by clamping headerIndex to 3, so no change needed here for keyboard navigation
+
   return (
-    <div className="unified-header flex justify-between items-center w-full p-6 md:p-8 fixed top-0 left-0 right-0 z-[60] py-[25px]">
+  <div className="unified-header flex justify-between items-center w-full fixed top-0 left-0 right-0 z-[60] py-[25px]" style={{paddingLeft: '25px', paddingRight: '40px'}}>
       {/* Navigation buttons aligned to the left */}
       <div className="flex items-center space-x-4">
         {navItems.map((item, index) => {
@@ -37,17 +40,26 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
           const isFocused = focused && focusedIndex === index;
           
           return (
-            <button 
-              key={item.path}
-              id={`header-button-${index}`}
-              onClick={() => handleNavClick(item.path, index)} 
-              className={`
-                h-10 text-sm font-medium rounded-full px-4 flex items-center whitespace-nowrap transform transition-all duration-300
-                ${isActive ? 'bg-white text-black shadow-lg scale-105' : isFocused ? 'bg-gray-600 text-white shadow-lg scale-105' : 'text-gray-300 hover:text-white hover:bg-white/10 scale-100'}
-              `}
-            >
-              {item.name}
-            </button>
+              <button 
+                key={item.path}
+                id={`header-button-${index}`}
+                onClick={() => handleNavClick(item.path, index)} 
+                className={`
+                  text-2xl font-extralight px-2 flex items-center whitespace-nowrap bg-transparent border-none outline-none transition-all duration-300
+                  ${isActive ? 'text-white font-light' : isFocused ? 'text-white focus-glow' : 'text-gray-300 hover:text-white'}
+                `}
+                style={{
+                  textShadow: isFocused ? '0 0 4px rgba(255,255,255,0.6), 0 0 8px rgba(255,255,255,0.3)' : 'none',
+                  background: 'transparent',
+                  borderRadius: 0,
+                  height: 'auto',
+                  padding: '0 16px',
+                  position: 'relative',
+                  opacity: isActive || isFocused ? 1 : 0.3,
+                }}
+              >
+                {item.name}
+              </button>
           );
         })}
       </div>
