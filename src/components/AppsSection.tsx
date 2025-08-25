@@ -27,14 +27,22 @@ const AppsSection: React.FC = () => {
   };
   return <div className="w-full">
       <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4">
-        {apps.map((app, index) => <Card key={index} onClick={() => handleAppClick(app.url)} className="flex-shrink-0 w-60 h-60 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105 rounded-3xl">
-            <div className="w-full h-full p-6 flex flex-col items-center justify-center">
-              <img src={app.icon} alt={app.name} className="w-24 h-24 rounded-2xl object-cover mb-4" />
-              <span className="text-lg text-foreground text-center font-medium truncate w-full">
-                {app.name}
-              </span>
+        {apps.map((app, index) => (
+          <Card
+            key={index}
+            onClick={() => handleAppClick(app.url)}
+            className="flex-shrink-0 w-64 h-44 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105 rounded-2xl p-0"
+          >
+            <div className="w-full h-full relative">
+              <img
+                src={app.icon}
+                alt={app.name}
+                className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl"
+                style={{ zIndex: 1 }}
+              />
             </div>
-          </Card>)}
+          </Card>
+        ))}
       </div>
     </div>;
 };
