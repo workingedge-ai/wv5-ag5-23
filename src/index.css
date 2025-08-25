@@ -75,10 +75,15 @@
     @apply border-border;
   }
   
-  html, body {
-    @apply bg-black text-foreground;
-    overflow-x: hidden;
-  }
+    html, body, #root {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+      background: url('/public/bg-main.png') center center / cover no-repeat #000;
+    }
   
   /* Hide all scrollbars globally */
   * {

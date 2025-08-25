@@ -10,7 +10,7 @@ const apps = [{
   url: 'https://music.youtube.com'
 }, {
   name: 'Plex',
-  icon: '/src/assets/plex-icon.jpg',
+  icon: '/src/apps/Plex.png',
   url: 'https://plex.tv'
 }, {
   name: 'Netflix',
