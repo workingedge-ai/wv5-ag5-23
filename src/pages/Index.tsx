@@ -11,7 +11,7 @@ const Index = () => {
     window.scrollTo(0, 0);
   }, []);
   return <div className="min-h-screen bg-transparent text-white relative">
-      <div className="pt-24 py-0">
+      <div className="pt-24 py-[49px]">
         {/* Welcome Message */}
         <div className="px-6 md:px-8 mb-8">
           <div className="max-w-7xl mx-auto">
