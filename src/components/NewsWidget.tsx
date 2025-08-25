@@ -44,8 +44,8 @@ const NewsWidget: React.FC = () => {
   const currentNews = newsItems[currentIndex];
 
   return (
-    <Card className="h-full bg-background/10 border-border/20 backdrop-blur-sm rounded-2xl box-border">
-      <div className="p-4 h-full flex flex-col justify-center">
+    <Card className="h-full bg-background/10 border-border/20 backdrop-blur-sm rounded-3xl box-border">
+      <div className="p-6 h-full flex flex-col justify-center box-border overflow-hidden">
         <div className={`transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <h3 className="text-sm font-semibold text-foreground mb-2">News</h3>
           <h4 className="text-xs font-medium text-foreground mb-1 line-clamp-2">

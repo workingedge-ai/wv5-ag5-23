@@ -26,11 +26,11 @@ const AppsSection: React.FC = () => {
     window.open(url, '_blank');
   };
   return <div className="w-full">
-      <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
-        {apps.map((app, index) => <Card key={index} onClick={() => handleAppClick(app.url)} className="flex-shrink-0 w-20 h-20 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105">
-            <div className="w-full h-full p-2 flex flex-col items-center justify-center">
-              <img src={app.icon} alt={app.name} className="w-8 h-8 rounded-md object-cover mb-1" />
-              <span className="text-xs text-foreground text-center font-medium truncate w-full">
+      <div className="flex gap-6 overflow-x-auto scrollbar-hide pb-4">
+        {apps.map((app, index) => <Card key={index} onClick={() => handleAppClick(app.url)} className="flex-shrink-0 w-60 h-60 bg-background/10 border-border/20 backdrop-blur-sm cursor-pointer hover:bg-background/20 transition-all duration-200 hover:scale-105 rounded-3xl">
+            <div className="w-full h-full p-6 flex flex-col items-center justify-center">
+              <img src={app.icon} alt={app.name} className="w-24 h-24 rounded-2xl object-cover mb-4" />
+              <span className="text-lg text-foreground text-center font-medium truncate w-full">
                 {app.name}
               </span>
             </div>
