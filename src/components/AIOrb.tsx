@@ -20,6 +20,8 @@ const AudioAnimationOrb = (props: {
   isThinking?: boolean;
   isListening?: boolean;
   isConnected?: boolean;
+  useMicrophone?: boolean;
+  audioOutputRef?: React.RefObject<HTMLAudioElement>;
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -336,6 +338,12 @@ const AudioAnimationOrb = (props: {
       // Calculate average frequency and scale by SENSITIVITY
       let freqData =
         dataArray.reduce((acc, value) => acc + value, 0) / dataArray.length;
+      
+      // If no microphone or audio output, use random animation
+      if (!props.useMicrophone && !props.audioOutputRef?.current) {
+        freqData = Math.random() * 50 + 10; // Random animation between 10-60
+      }
+      
       freqData *= SENSITIVITY; // Apply sensitivity here
 
       // Update uniforms
@@ -357,20 +365,36 @@ const AudioAnimationOrb = (props: {
 
     let source: MediaStreamAudioSourceNode;
     let stream: MediaStream;
+    let audioOutputSource: MediaElementAudioSourceNode;
 
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((s) => {
-        stream = s;
-        source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        animate();
-      })
-      .catch((err) => {
-        console.error("Failed microphone access: ", err);
-        // Still animate even without microphone
-        animate();
-      });
+    // Start animation immediately
+    animate();
+
+    // Setup audio sources based on props
+    if (props.useMicrophone) {
+      // Request microphone access when AI is connected
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((s) => {
+          stream = s;
+          source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+        })
+        .catch((err) => {
+          console.error("Failed microphone access: ", err);
+        });
+    }
+
+    // Connect to audio output if provided (for AI speech)
+    if (props.audioOutputRef?.current) {
+      try {
+        audioOutputSource = audioContext.createMediaElementSource(props.audioOutputRef.current);
+        audioOutputSource.connect(analyser);
+        audioOutputSource.connect(audioContext.destination); // Also connect to speakers
+      } catch (err) {
+        console.error("Failed to connect audio output: ", err);
+      }
+    }
 
     // Handle window resize
     const handleResize = () => {
@@ -418,12 +442,15 @@ const AudioAnimationOrb = (props: {
         console.log(`stream not found`);
       }
 
-      // Disconnect audio source if exists
+      // Disconnect audio sources if they exist
       if (source) {
-        console.log(`disconnecting source`);
+        console.log(`disconnecting microphone source`);
         source.disconnect();
-      } else {
-        console.log(`source not found`);
+      }
+      
+      if (audioOutputSource) {
+        console.log(`disconnecting audio output source`);
+        audioOutputSource.disconnect();
       }
 
       // Close the audio context
@@ -431,7 +458,7 @@ const AudioAnimationOrb = (props: {
         .close()
         .catch((err) => console.error("Error closing audioContext: ", err));
     };
-  }, [props.width, props.height, props.showOrb, props.isConnected]);
+  }, [props.width, props.height, props.showOrb, props.isConnected, props.useMicrophone, props.audioOutputRef]);
 
   return (
     <div
@@ -479,6 +506,9 @@ const AIOrb: React.FC<AIOrbProps> = ({
     isFocused,
     setFocused
   } = useAIOrbFocus();
+  
+  // Ref for audio output from Gemini AI
+  const audioOutputRef = useRef<HTMLAudioElement>(null);
 
   // Listen for mute events from Gemini service
   useEffect(() => {
@@ -543,7 +573,16 @@ const AIOrb: React.FC<AIOrbProps> = ({
         height={48}
         showOrb={true}
         isConnected={isConnected && !isMuted}
+        useMicrophone={isConnected && !isMuted}
+        audioOutputRef={audioOutputRef}
         animationSensitivity={1.5}
+      />
+      
+      {/* Hidden audio element for AI speech output */}
+      <audio
+        ref={audioOutputRef}
+        style={{ display: 'none' }}
+        crossOrigin="anonymous"
       />
     </button>
   );
