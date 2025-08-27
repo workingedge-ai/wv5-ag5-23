@@ -30,6 +30,13 @@ const Index = () => {
       } else if (e.key === 'ArrowDown') {
         setFocusedSection('apps');
         e.preventDefault();
+      } else if (e.key === 'Enter') {
+        // Simulate click on the focused header button
+        const btn = document.getElementById(`header-button-${headerIndex}`);
+        if (btn) {
+          (btn as HTMLElement).click();
+        }
+        e.preventDefault();
       }
     } else if (focusedSection === 'apps') {
       if (e.key === 'ArrowUp') {
@@ -81,7 +88,7 @@ const Index = () => {
   <div className="min-h-screen bg-transparent text-white relative" >
       <div className="pt-0 py-0">
         {/* Welcome Message Above Widget Section */}
-        <div className="mb-0 pl-10" style={{marginTop: '10px'}}>
+        <div className="mb-0 pl-10">
           <h1 className="text-2xl font-medium text-white text-left my-0">
             Welcome {guestName}, what would you like to do?
           </h1>

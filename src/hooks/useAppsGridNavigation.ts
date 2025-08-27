@@ -13,7 +13,6 @@ export const useAppsGridNavigation = (
   navItemsCount: number = 3
 ) => {
   const { isFocused: isAIFocused, setFocused: setAIFocused } = useAIOrbFocus();
-  
   const [navigation, setNavigation] = useState<AppsNavigationState>({
     currentSection: isAIFocused ? 'ai-button' : 'apps',
     focusedIndex: 0,
@@ -27,7 +26,6 @@ export const useAppsGridNavigation = (
       });
       return;
     }
-    
     const sectionElement = document.getElementById(`section-${section}`);
     if (sectionElement) {
       const headerHeight = 80;
@@ -133,5 +131,5 @@ export const useAppsGridNavigation = (
     };
   }, [handleKeyPress]);
 
-  return navigation;
+  return { ...navigation, setNavigation };
 };

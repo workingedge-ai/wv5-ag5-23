@@ -53,6 +53,24 @@ const Restaurant = () => {
 
   // Initialize keyboard navigation
   const navigation = useRestaurantNavigation(categories.length, filteredItems.length, 4, universalNavigation);
+
+  // Automatically update selected category when keyboard navigation changes focus in categories section
+  useEffect(() => {
+    if (navigation.currentSection === 'categories' && navigation.focusedIndex !== -1) {
+      const focusedCategory = categories[navigation.focusedIndex];
+      if (focusedCategory && focusedCategory !== selectedCategory) {
+        setSelectedCategory(focusedCategory);
+        // Scroll to the category section
+        const categorySection = document.getElementById(`category-section-${focusedCategory.toLowerCase()}`);
+        if (categorySection) {
+          categorySection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }
+    }
+  }, [navigation.currentSection, navigation.focusedIndex, categories, selectedCategory]);
   const addToOrder = (item: MenuItem) => {
     const existingItem = orderItems.find(orderItem => orderItem.id === item.id);
     if (existingItem) {
@@ -170,7 +188,7 @@ const Restaurant = () => {
           maxHeight: 'calc(100vh - 220px)'
         }}>
             {categories.map(category => <div key={category} id={`category-section-${category.toLowerCase()}`}>
-                <h3 className="text-xl font-bold text-white mb-4 mt-6 first:mt-0 sticky top-0 bg-black/90 py-2 z-10">
+                <h3 className="text-xl font-bold text-white mb-4 mt-6 first:mt-0 sticky top-0 py-2 z-10">
                   {category}
                 </h3>
                 <div className="space-y-4">

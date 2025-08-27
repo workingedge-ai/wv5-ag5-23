@@ -124,7 +124,7 @@ const AppContent = () => {
         onWeatherChange={navigation.setWeatherCondition}
       />
       
-      <main className="min-h-screen bg-black pt-24">
+      <main className="min-h-screen pt-24">
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/apps" element={<Apps />} />

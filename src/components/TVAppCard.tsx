@@ -1,41 +1,39 @@
-
-import React from 'react';
-import { Card } from '@/components/ui/card';
+import React from "react";
 
 interface TVAppCardProps {
   name: string;
   icon: string;
   url: string;
+  focused?: boolean;
   className?: string;
   style?: React.CSSProperties;
-  focused?: boolean;
 }
 
-const TVAppCard: React.FC<TVAppCardProps> = ({ name, icon, url, className, style, focused = false }) => {
-  const handleClick = () => {
-    window.open(url, '_blank');
-  };
-
+const TVAppCard: React.FC<TVAppCardProps> = ({
+  name,
+  icon,
+  url,
+  focused = false,
+  className = "",
+  style = {}
+}) => {
   return (
-    <Card 
-      onClick={handleClick}
-      className={`relative overflow-hidden glassmorphism bg-psyco-black-light/20 border-transparent transition-all duration-300 cursor-pointer group card-hover w-52 h-32 ${
-        focused ? 'border-white border-2 scale-105' : 'hover:border-psyco-green-DEFAULT/50'
-      } ${className}`}
+    <div
+      className={`relative flex flex-col items-center justify-center rounded-2xl shadow-lg cursor-pointer transition-all duration-200 border-2 border-transparent hover:border-teal-400 ${focused ? "border-teal-400" : ""} bg-background/10 backdrop-blur-sm p-4 "${className}`}
       style={style}
+      onClick={() => window.open(url, "_blank")}
+      tabIndex={0}
+      role="button"
+      aria-label={`Open ${name}`}
     >
-      <div className="relative w-full h-full">
-        <img 
-          src={icon} 
-          alt={`${name} app`}
-          className="w-full h-full object-cover rounded-lg"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute bottom-1 left-1 right-1">
-          <h3 className="text-white font-medium text-xs text-center truncate">{name}</h3>
-        </div>
-      </div>
-    </Card>
+      <img
+        src={icon}
+        alt={name}
+        className="w-16 h-16 object-cover rounded-xl mb-3"
+        style={{ boxShadow: focused ? "0 0 12px 2px #14b8a6" : "none" }}
+      />
+      <span className={`text-lg font-semibold text-white text-center ${focused ? "text-teal-300" : ""}`}>{name}</span>
+    </div>
   );
 };
 

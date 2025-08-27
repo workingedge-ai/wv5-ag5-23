@@ -73,7 +73,7 @@ const AIOrb: React.FC<AIOrbProps> = ({
       id="ai-orb-button"
       onClick={handleClick}
       className={`
-        w-14 h-14 flex items-center justify-center rounded-full transition-all duration-300 font-bold text-xl
+        w-12 h-12 flex items-center justify-center rounded-full transition-all duration-300 font-bold text-xl
         ${isOrbFocused ? 'bg-white text-black shadow-lg' : 'bg-gray-700 text-white hover:bg-white/10'}
       `}
       style={{ outline: 'none', border: 'none' }}

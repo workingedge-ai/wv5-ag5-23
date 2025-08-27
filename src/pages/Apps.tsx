@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
-import TVAppCard from "@/components/TVAppCard";
+import TVAppCard from "../components/TVAppCard";
 import { useAppsGridNavigation } from "@/hooks/useAppsGridNavigation";
-
-// Import images
 import netflixIcon from "@/assets/netflix-icon.jpg";
 import youtubeIcon from "@/assets/youtube-icon.jpg";
 import plutoIcon from "@/assets/pluto-icon.jpg";
 import youtubeMusicIcon from "@/assets/youtube-music-icon.jpg";
 import plexIcon from "@/assets/plex-icon.jpg";
+import UnifiedHeader from "../components/UnifiedHeader";
 
 const Apps = () => {
   const [weatherCondition, setWeatherCondition] = useState<'sunny' | 'cloudy' | 'rainy' | 'stormy' | 'snowy'>('sunny');
@@ -32,8 +31,19 @@ const Apps = () => {
   // Initialize keyboard navigation
   const navigation = useAppsGridNavigation(streamingApps.length, 5);
 
+  // On mount, set focus to header only
+  useEffect(() => {
+    navigation.setNavigation({ currentSection: 'nav', focusedIndex: 0 });
+  }, []);
+
   return (
     <div className="min-h-screen bg-transparent text-white relative overflow-x-hidden">
+      {/* UnifiedHeader with focus support */}
+      <UnifiedHeader 
+        focused={navigation.currentSection === 'nav'}
+        focusedIndex={navigation.focusedIndex}
+        onWeatherChange={setWeatherCondition}
+      />
       <div className="p-6 md:p-8 pt-8 max-w-full overflow-x-hidden">
         <div className="mb-12 max-w-6xl mx-auto">
           <h1 className="text-4xl font-bold text-white mb-2">All Apps</h1>

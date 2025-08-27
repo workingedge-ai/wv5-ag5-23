@@ -32,7 +32,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
   // This is handled in Index.tsx by clamping headerIndex to 3, so no change needed here for keyboard navigation
 
   return (
-  <div className="unified-header flex justify-between items-center w-full fixed top-0 left-0 right-0 z-[60] py-[25px]" style={{paddingLeft: '25px', paddingRight: '40px'}}>
+  <div className="unified-header flex justify-between items-center w-full fixed top-0 left-0 right-0 z-[60] py-[12px]" style={{paddingLeft: '25px', paddingRight: '40px'}}>
       {/* Navigation buttons aligned to the left */}
       <div className="flex items-center space-x-4">
         {navItems.map((item, index) => {
@@ -45,7 +45,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
                 id={`header-button-${index}`}
                 onClick={() => handleNavClick(item.path, index)} 
                 className={`
-                  text-2xl font-extralight px-2 flex items-center whitespace-nowrap bg-transparent border-none outline-none transition-all duration-300
+                  text-xl font-extralight px-2 flex items-center whitespace-nowrap bg-transparent border-none outline-none transition-all duration-300
                   ${isActive ? 'text-white font-light' : isFocused ? 'text-white focus-glow' : 'text-gray-300 hover:text-white'}
                 `}
                 style={{

@@ -82,7 +82,7 @@
       padding: 0;
       box-sizing: border-box;
       font-family: 'Poppins', sans-serif;
-      background: url('/public/bg-main.png') center center / cover no-repeat #000;
+      background: url('/bg-main.png') center center / cover no-repeat;
     }
   
   /* Hide all scrollbars globally */

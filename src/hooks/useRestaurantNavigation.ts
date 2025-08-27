@@ -115,6 +115,24 @@ export const useRestaurantNavigation = (
         case 'ArrowRight':
           event.preventDefault();
           if (currentSection === 'categories') {
+            // Find first visible menu item in viewport
+            const container = document.getElementById('menu-items-container');
+            if (container) {
+              const cards = Array.from(container.querySelectorAll<HTMLElement>('.cursor-pointer'));
+              const containerRect = container.getBoundingClientRect();
+              let firstVisibleIndex = 0;
+              for (let i = 0; i < cards.length; i++) {
+                const cardRect = cards[i].getBoundingClientRect();
+                if (
+                  cardRect.bottom > containerRect.top &&
+                  cardRect.top < containerRect.bottom
+                ) {
+                  firstVisibleIndex = i;
+                  break;
+                }
+              }
+              return { currentSection: 'menu-items', focusedIndex: firstVisibleIndex };
+            }
             return { currentSection: 'menu-items', focusedIndex: 0 };
           } else if (currentSection === 'menu-items') {
             return { currentSection: 'place-order', focusedIndex: 0 };
