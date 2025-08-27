@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { useGeminiLiveAudio } from '@/hooks/useGeminiLiveAudio';
+import { useGlobalAIOrb } from '@/hooks/useGlobalAIOrb';
 import { useAIOrbFocus } from '@/hooks/useAIOrbFocus';
 
 interface AIOrbProps {
@@ -500,15 +500,23 @@ const AIOrb: React.FC<AIOrbProps> = ({
     toggleMute,
     mute,
     connect,
-    disconnect
-  } = useGeminiLiveAudio();
+    disconnect,
+    audioOutputElement
+  } = useGlobalAIOrb();
   const {
     isFocused,
     setFocused
   } = useAIOrbFocus();
   
-  // Ref for audio output from Gemini AI
+  // Create a ref that points to the global audio element
   const audioOutputRef = useRef<HTMLAudioElement>(null);
+  
+  // Update the ref when the global audio element is available
+  useEffect(() => {
+    if (audioOutputElement) {
+      audioOutputRef.current = audioOutputElement;
+    }
+  }, [audioOutputElement]);
 
   // Listen for mute events from Gemini service
   useEffect(() => {
@@ -576,13 +584,6 @@ const AIOrb: React.FC<AIOrbProps> = ({
         useMicrophone={isConnected && !isMuted}
         audioOutputRef={audioOutputRef}
         animationSensitivity={1.5}
-      />
-      
-      {/* Hidden audio element for AI speech output */}
-      <audio
-        ref={audioOutputRef}
-        style={{ display: 'none' }}
-        crossOrigin="anonymous"
       />
     </button>
   );
