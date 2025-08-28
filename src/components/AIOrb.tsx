@@ -26,6 +26,23 @@ const AudioAnimationOrb = (props: {
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
 
+  // Track isConnected in a ref so the Three.js effect isn't recreated
+  // when connection toggles — we want to lerp inside the animation loop.
+  const isConnectedRef = useRef<boolean>(props.isConnected);
+  useEffect(() => {
+    isConnectedRef.current = props.isConnected;
+  }, [props.isConnected]);
+
+  // Refs to share audio objects between effects without remounting Three
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+
+  // Refs for audio sources (created/managed separately)
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const audioOutputSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+
   // Get theme colors from CSS variables
   const getColor = (colorName: string) => {
     const hsl = getComputedStyle(document.documentElement).getPropertyValue(`--${colorName}`);
@@ -67,6 +84,11 @@ const AudioAnimationOrb = (props: {
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    // expose audio context and analyser to outer scope via refs (set below)
+    (audioContextRef as any).current = audioContext;
+    (analyserRef as any).current = analyser;
+    (dataArrayRef as any).current = dataArray;
 
     const outerSegments = 1024;
 
@@ -225,8 +247,9 @@ const AudioAnimationOrb = (props: {
         time: { value: 0.0 },
         uFreqData: { value: 0.0 },
         // Start with grey colors
+        // Use cloned color objects so we can lerp them for smooth transitions
         uColor: {
-          value: props.isConnected ? vibrantColors : greyColors,
+          value: (props.isConnected ? vibrantColors : greyColors).map((c) => c.clone()),
         },
         resolution: { value: new THREE.Vector4() },
         freqInfluencedTime: { value: 0.0 },
@@ -332,6 +355,8 @@ const AudioAnimationOrb = (props: {
     InnerCircle.position.z = 0.01;
 
     let animationFrameId: number;
+  // Smoothed frequency to avoid jumps between mute/unmute
+  let smoothedFreq = 0;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
@@ -345,57 +370,62 @@ const AudioAnimationOrb = (props: {
         freqData = Math.random() * 50 + 10; // Random animation between 10-60
       }
       
-      freqData *= SENSITIVITY; // Apply sensitivity here
+  freqData *= SENSITIVITY; // Apply sensitivity here
 
-      // Update uniforms
-      innerMaterial.uniforms.time.value += 0.0005;
-      innerMaterial.uniforms.freqInfluencedTime.value +=
-        0.0001 + freqData * 0.00001;
-      innerMaterial.uniforms.uFreqData.value = freqData;
+  // If there's no live audio source, use a small ambient target so visuals remain continuous
+  const ambientIfDisconnected = 8; // low-energy baseline
+  const hasAudioSource = props.useMicrophone || !!props.audioOutputRef?.current;
+  const targetFreq = hasAudioSource ? freqData : ambientIfDisconnected;
 
-      // Update colors based on connection state
-      innerMaterial.uniforms.uColor.value = props.isConnected ? vibrantColors : greyColors;
+  // Smooth frequency to avoid abrupt jumps when sources connect/disconnect or when mute toggles
+  const freqSmoothFactor = 0.03; // 0-1, lower = smoother/slower response
+  smoothedFreq += (targetFreq - smoothedFreq) * freqSmoothFactor;
 
-      greenMaterial.uniforms.uTime.value += 0.05;
-      greenMaterial.uniforms.uFreqData.value = freqData;
-      greenMaterial.uniforms.uOpacity.value = props.isConnected ? 0.3 : 0.1;
-      greenMaterial.uniforms.uSpotColor.value = props.isConnected ? new THREE.Color().set(getColor("primary")) : new THREE.Color(0.4, 0.4, 0.4);
+  // Update uniforms using the smoothed frequency
+  innerMaterial.uniforms.time.value += 0.0005;
+  innerMaterial.uniforms.freqInfluencedTime.value += 0.0001 + smoothedFreq * 0.00001;
+  innerMaterial.uniforms.uFreqData.value = smoothedFreq;
+      // Smoothly interpolate colors between grey and vibrant when connection state changes
+    const targetColors = isConnectedRef.current ? vibrantColors : greyColors;
+      const colorLerp = 0.08; // how fast colors blend per frame (0-1)
+
+      // Ensure uniform value is an array of THREE.Color
+      if (!Array.isArray(innerMaterial.uniforms.uColor.value)) {
+        innerMaterial.uniforms.uColor.value = targetColors.map((c) => c.clone());
+      }
+
+      for (let i = 0; i < targetColors.length; i++) {
+        // lerp each uniform color towards its target
+        innerMaterial.uniforms.uColor.value[i].lerp(targetColors[i], colorLerp);
+      }
+
+  // Green spot: fade opacity and color
+  greenMaterial.uniforms.uTime.value += 0.05;
+  // Use smoothed frequency for spot calculations to avoid spikes
+  greenMaterial.uniforms.uFreqData.value = smoothedFreq;
+  const targetOpacity = isConnectedRef.current ? 0.3 : 0.1;
+      // lerp numeric opacity
+      greenMaterial.uniforms.uOpacity.value += (targetOpacity - greenMaterial.uniforms.uOpacity.value) * 0.06;
+
+  const targetSpotColor = isConnectedRef.current ? new THREE.Color().set(getColor("primary")) : new THREE.Color(0.4, 0.4, 0.4);
+      if (!(greenMaterial.uniforms.uSpotColor.value instanceof THREE.Color)) {
+        greenMaterial.uniforms.uSpotColor.value = targetSpotColor.clone();
+      } else {
+        greenMaterial.uniforms.uSpotColor.value.lerp(targetSpotColor, 0.08);
+      }
 
       renderer.render(scene, camera);
     };
 
-    let source: MediaStreamAudioSourceNode;
-    let stream: MediaStream;
-    let audioOutputSource: MediaElementAudioSourceNode;
+  // local refs will mirror outer refs for cleanup
+  sourceRef.current = null;
+  streamRef.current = null;
+  audioOutputSourceRef.current = null;
 
     // Start animation immediately
     animate();
 
-    // Setup audio sources based on props
-    if (props.useMicrophone) {
-      // Request microphone access when AI is connected
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((s) => {
-          stream = s;
-          source = audioContext.createMediaStreamSource(stream);
-          source.connect(analyser);
-        })
-        .catch((err) => {
-          console.error("Failed microphone access: ", err);
-        });
-    }
-
-    // Connect to audio output if provided (for AI speech)
-    if (props.audioOutputRef?.current) {
-      try {
-        audioOutputSource = audioContext.createMediaElementSource(props.audioOutputRef.current);
-        audioOutputSource.connect(analyser);
-        audioOutputSource.connect(audioContext.destination); // Also connect to speakers
-      } catch (err) {
-        console.error("Failed to connect audio output: ", err);
-      }
-    }
+  // Audio sources are managed by a separate effect so we don't recreate the scene
 
     // Handle window resize
     const handleResize = () => {
@@ -414,9 +444,9 @@ const AudioAnimationOrb = (props: {
       renderer.setSize(props.width, props.height);
     };
 
-    window.addEventListener("resize", handleResize);
+  window.addEventListener("resize", handleResize);
 
-    return () => {
+  return () => {
       // Cancel animation loop
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -435,31 +465,106 @@ const AudioAnimationOrb = (props: {
       }
       renderer.dispose();
 
-      // Stop audio streams/tracks immediately
-      if (stream) {
-        console.log(`stopping stream`);
-        stream.getTracks().forEach((track) => track.stop());
-      } else {
-        console.log(`stream not found`);
+      // Stop and disconnect any audio sources created by the audio effect
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
-
-      // Disconnect audio sources if they exist
-      if (source) {
-        console.log(`disconnecting microphone source`);
-        source.disconnect();
+      if (sourceRef.current) {
+        try { sourceRef.current.disconnect(); } catch {}
+        sourceRef.current = null;
       }
-      
-      if (audioOutputSource) {
-        console.log(`disconnecting audio output source`);
-        audioOutputSource.disconnect();
+      if (audioOutputSourceRef.current) {
+        try { audioOutputSourceRef.current.disconnect(); } catch {}
+        audioOutputSourceRef.current = null;
       }
 
       // Close the audio context
-      audioContext
+    audioContext
         .close()
         .catch((err) => console.error("Error closing audioContext: ", err));
     };
-  }, [props.width, props.height, props.showOrb, props.isConnected, props.useMicrophone, props.audioOutputRef]);
+  }, [props.width, props.height, props.showOrb, props.audioOutputRef]);
+
+  // Separate effect: manage microphone and audio output connections to the analyser
+  useEffect(() => {
+    const audioContext = audioContextRef.current;
+    const analyser = analyserRef.current;
+    if (!audioContext || !analyser) return;
+
+    // Helper to connect a MediaStream to analyser
+    const connectStream = (s: MediaStream) => {
+      try {
+        const src = audioContext.createMediaStreamSource(s);
+        src.connect(analyser);
+        sourceRef.current = src;
+        streamRef.current = s;
+      } catch (err) {
+        console.error('Failed to connect microphone stream', err);
+      }
+    };
+
+    // Manage microphone
+    let micPromise: Promise<void> | null = null;
+    if (props.useMicrophone) {
+      micPromise = navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((s) => connectStream(s))
+        .catch((err) => console.error('Failed microphone access: ', err));
+    } else {
+      // if microphone disabled, stop any existing mic stream
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+        streamRef.current = null;
+      }
+      if (sourceRef.current) {
+        try { sourceRef.current.disconnect(); } catch {}
+        sourceRef.current = null;
+      }
+    }
+
+    // Manage audio output element connection
+    if (props.audioOutputRef?.current) {
+      try {
+        const audioEl = props.audioOutputRef.current;
+        // If an existing audioOutputSourceRef exists, disconnect first
+        if (audioOutputSourceRef.current) {
+          try { audioOutputSourceRef.current.disconnect(); } catch {}
+          audioOutputSourceRef.current = null;
+        }
+        const elSrc = audioContext.createMediaElementSource(audioEl);
+        elSrc.connect(analyser);
+        elSrc.connect(audioContext.destination);
+        audioOutputSourceRef.current = elSrc;
+      } catch (err) {
+        console.error('Failed to connect audio output: ', err);
+      }
+    } else {
+      if (audioOutputSourceRef.current) {
+        try { audioOutputSourceRef.current.disconnect(); } catch {}
+        audioOutputSourceRef.current = null;
+      }
+    }
+
+    return () => {
+      // On cleanup, stop mic request promise (best-effort) and disconnect
+      if (micPromise) micPromise = null;
+      if (streamRef.current) {
+        try { streamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+        streamRef.current = null;
+      }
+      if (sourceRef.current) {
+        try { sourceRef.current.disconnect(); } catch {}
+        sourceRef.current = null;
+      }
+      if (audioOutputSourceRef.current) {
+        try { audioOutputSourceRef.current.disconnect(); } catch {}
+        audioOutputSourceRef.current = null;
+      }
+    };
+  }, [props.useMicrophone, props.audioOutputRef]);
+
+  // Refs and state for audio nodes so we can connect/disconnect without remounting Three.js
+
 
   return (
     <div
@@ -655,7 +760,16 @@ const AIOrb: React.FC<AIOrbProps> = ({
         w-12 h-12 flex items-center justify-center rounded-full transition-all duration-300 relative overflow-hidden
         ${isOrbFocused ? 'ring-2 ring-white/50' : ''}
       `}
-      style={{ outline: 'none', border: 'none', background: 'transparent' }}
+      style={{
+        outline: 'none',
+        border: 'none',
+        background: 'transparent',
+        // Smooth violet glow when AI is connected and not muted
+        boxShadow: shouldShowWaveform
+          ? '0 0 22px 6px rgba(139,92,246,0.18), 0 0 8px 2px rgba(139,92,246,0.22) inset'
+          : undefined,
+        transition: 'box-shadow 350ms cubic-bezier(0.2,0.9,0.2,1), transform 200ms ease',
+      }}
     >
       <AudioAnimationOrb
         width={48}
