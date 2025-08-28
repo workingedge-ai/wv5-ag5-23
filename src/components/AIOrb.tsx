@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useGlobalAIOrb } from '@/hooks/useGlobalAIOrb';
@@ -528,6 +529,51 @@ const AIOrb: React.FC<AIOrbProps> = ({
       window.removeEventListener('aiOrb:mute', handleMuteEvent);
     };
   }, [mute]);
+
+  // WebSocket listener for wake-word server
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: number | null = null;
+
+    const connectWs = () => {
+      try {
+        const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+        const url = `ws://${host}:8765`;
+        ws = new WebSocket(url);
+        ws.onopen = () => console.log('Wake-word WS connected', url);
+        ws.onmessage = (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'wake') {
+              // Bring orb into focus and connect
+              setFocused(true);
+              connect();
+            }
+          } catch (err) {
+            console.error('Invalid WS message', err);
+          }
+        };
+        ws.onclose = () => {
+          console.log('Wake-word WS closed, reconnecting in 5s');
+          reconnectTimer = window.setTimeout(connectWs, 5000);
+        };
+        ws.onerror = (err) => {
+          console.error('Wake-word WS error', err);
+          ws?.close();
+        };
+      } catch (err) {
+        console.error('Failed to init wake-word WS', err);
+        reconnectTimer = window.setTimeout(connectWs, 5000);
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
+  }, [connect, setFocused]);
 
   const handleClick = async () => {
     onClick?.();

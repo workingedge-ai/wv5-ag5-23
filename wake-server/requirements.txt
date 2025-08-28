@@ -1,0 +1,4 @@
+websockets==11.0.3
+vosk==0.3.44
+sounddevice==0.4.7
+numpy==1.24.4
