@@ -74,13 +74,11 @@ def recognize_loop(recognizer, loop):
         try:
             if recognizer.AcceptWaveform(data):
                 result = recognizer.Result()
-                # Print the raw JSON result for debugging
-                print('Final result (raw):', result, flush=True)
                 try:
                     j = json.loads(result)
-                    text = j.get('text', '')
+                    text = j.get('text', '').strip()
                     if text:
-                        print('Recognized:', text, flush=True)
+                        print(f'Recognised:{text}', flush=True)
                         if WAKE_PHRASE in text.lower():
                             print('Wake phrase detected, broadcasting', flush=True)
                             try:
@@ -88,17 +86,17 @@ def recognize_loop(recognizer, loop):
                                 asyncio.run_coroutine_threadsafe(broadcast_wake(), loop)
                             except Exception as e:
                                 print('Failed to schedule broadcast', e, flush=True)
-                except Exception as e:
-                    print('Result parse error', e, flush=True)
+                except Exception:
+                    pass
             else:
                 # Print partial results for debugging
                 try:
                     partial = recognizer.PartialResult()
                     try:
                         pj = json.loads(partial)
-                        ptext = pj.get('partial', '')
+                        ptext = pj.get('partial', '').strip()
                         if ptext:
-                            print('Partial:', ptext, flush=True)
+                            print(f'Recognised:{ptext}', flush=True)
                     except Exception:
                         pass
                 except Exception:
@@ -119,7 +117,13 @@ async def main():
 
     print('Loading model...')
     model = Model(MODEL_PATH)
-    recognizer = KaldiRecognizer(model, SAMPLE_RATE)
+    # Prefer a tight grammar (only the wake phrase) to improve wake detection
+    try:
+        grammar = json.dumps([WAKE_PHRASE])
+        recognizer = KaldiRecognizer(model, SAMPLE_RATE, grammar)
+        print(f'Using Vosk grammar: {grammar}')
+    except Exception:
+        recognizer = KaldiRecognizer(model, SAMPLE_RATE)
 
     # Start websocket server
     ws_server = await websockets.serve(ws_handler, '0.0.0.0', WEBSOCKET_PORT)

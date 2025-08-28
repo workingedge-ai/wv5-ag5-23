@@ -500,6 +500,7 @@ const AIOrb: React.FC<AIOrbProps> = ({
     isMuted,
     toggleMute,
     mute,
+  unmute,
     connect,
     disconnect,
     audioOutputElement
@@ -531,9 +532,12 @@ const AIOrb: React.FC<AIOrbProps> = ({
   }, [mute]);
 
   // WebSocket listener for wake-word server
+  // Only connect when the AI orb is NOT actively connected and unmuted.
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimer: number | null = null;
+
+    const shouldBeConnected = !(isConnected && !isMuted);
 
     const connectWs = () => {
       try {
@@ -541,21 +545,43 @@ const AIOrb: React.FC<AIOrbProps> = ({
         const url = `ws://${host}:8765`;
         ws = new WebSocket(url);
         ws.onopen = () => console.log('Wake-word WS connected', url);
-        ws.onmessage = (e) => {
+        ws.onmessage = async (e) => {
           try {
             const msg = JSON.parse(e.data);
             if (msg.type === 'wake') {
-              // Bring orb into focus and connect
+              // Focus orb UI
               setFocused(true);
-              connect();
+
+              // If not connected, establish connection
+              if (!isConnected) {
+                await connect();
+                return;
+              }
+
+              // If connected but muted, unmute (click the orb / unmute mic)
+              if (isConnected && isMuted) {
+                try {
+                  await unmute();
+                } catch (err) {
+                  // Fallback: toggle if unmute not available
+                  try { await toggleMute(); } catch {}
+                }
+                return;
+              }
+
+              // Otherwise AI is already connected and unmuted -> ignore
+              console.log('Wake received but AI already connected and unmuted; ignoring');
             }
           } catch (err) {
             console.error('Invalid WS message', err);
           }
         };
         ws.onclose = () => {
-          console.log('Wake-word WS closed, reconnecting in 5s');
-          reconnectTimer = window.setTimeout(connectWs, 5000);
+          console.log('Wake-word WS closed');
+          // If we still should be connected, try to reconnect after a delay
+          if (shouldBeConnected) {
+            reconnectTimer = window.setTimeout(connectWs, 5000);
+          }
         };
         ws.onerror = (err) => {
           console.error('Wake-word WS error', err);
@@ -563,17 +589,26 @@ const AIOrb: React.FC<AIOrbProps> = ({
         };
       } catch (err) {
         console.error('Failed to init wake-word WS', err);
-        reconnectTimer = window.setTimeout(connectWs, 5000);
+        if (shouldBeConnected) reconnectTimer = window.setTimeout(connectWs, 5000);
       }
     };
 
-    connectWs();
+    // Open or close connection based on AI state
+    if (shouldBeConnected) {
+      connectWs();
+    } else {
+      // Ensure closed if AI is active
+      if (ws) {
+        try { ws.close(); } catch {};
+        ws = null;
+      }
+    }
 
     return () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) ws.close();
     };
-  }, [connect, setFocused]);
+  }, [connect, setFocused, isConnected, isMuted, unmute, toggleMute]);
 
   const handleClick = async () => {
     onClick?.();
