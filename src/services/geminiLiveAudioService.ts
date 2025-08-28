@@ -407,7 +407,7 @@ export class GeminiLiveAudioService {
       await this.inputAudioContext.resume();
       await this.outputAudioContext.resume();
 
-      const model = 'gemini-2.5-flash-preview-native-audio-dialog';
+      const model = 'gemini-2.0-flash-live-001';
 
       this.session = await this.client.live.connect({
         model: model,

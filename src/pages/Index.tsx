@@ -12,7 +12,11 @@ const Index = () => {
   // Focus state: 'header' or 'apps'
   const [focusedSection, setFocusedSection] = useState<'header' | 'apps'>('header');
   // Header button index (0-3)
-  const [headerIndex, setHeaderIndex] = useState(0);
+    // Restore last header index from localStorage if available
+    const [headerIndex, setHeaderIndex] = useState(() => {
+      const stored = localStorage.getItem('header-focus-index');
+      return stored ? parseInt(stored, 10) : 0;
+    });
 
   // Keyboard navigation for apps section (if you want to support left/right in apps, you can expand)
   const APPS_COUNT = 5; // Update this if the number of apps changes
@@ -22,10 +26,18 @@ const Index = () => {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (focusedSection === 'header') {
       if (e.key === 'ArrowRight') {
-        setHeaderIndex((prev) => Math.min(prev + 1, 3)); // Stay at last button
+        setHeaderIndex((prev) => {
+          const next = Math.min(prev + 1, 3);
+          localStorage.setItem('header-focus-index', next.toString());
+          return next;
+        });
         e.preventDefault();
       } else if (e.key === 'ArrowLeft') {
-        setHeaderIndex((prev) => Math.max(prev - 1, 0));
+        setHeaderIndex((prev) => {
+          const next = Math.max(prev - 1, 0);
+          localStorage.setItem('header-focus-index', next.toString());
+          return next;
+        });
         e.preventDefault();
       } else if (e.key === 'ArrowDown') {
         setFocusedSection('apps');
@@ -40,6 +52,9 @@ const Index = () => {
       }
     } else if (focusedSection === 'apps') {
       if (e.key === 'ArrowUp') {
+        // Restore last header index from localStorage
+        const stored = localStorage.getItem('header-focus-index');
+        setHeaderIndex(stored ? parseInt(stored, 10) : 0);
         setFocusedSection('header');
         e.preventDefault();
       } else if (e.key === 'ArrowRight') {
@@ -50,7 +65,7 @@ const Index = () => {
         e.preventDefault();
       }
     }
-  }, [focusedSection]);
+  }, [focusedSection, headerIndex, APPS_COUNT]);
 
   useEffect(() => {
     window.scrollTo(0, 0);

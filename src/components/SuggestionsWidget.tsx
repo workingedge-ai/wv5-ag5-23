@@ -47,7 +47,7 @@ const SuggestionsWidget: React.FC = () => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % suggestions.length);
         setIsVisible(true);
       }, 500); // Wait for fade out before changing content
-  }, 30000); // Change every 30 seconds
+  }, 25000); // Change every 25 seconds
     return () => clearInterval(interval);
   }, []);
 
