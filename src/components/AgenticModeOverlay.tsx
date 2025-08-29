@@ -19,10 +19,26 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [shouldRender, setShouldRender] = useState<boolean>(false);
+  const [closing, setClosing] = useState<boolean>(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const exitTimeoutRef = useRef<number | null>(null);
+  const closeActionTimeoutRef = useRef<number | null>(null);
+  const ANIMATION_MS = 300;
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (exitTimeoutRef.current) window.clearTimeout(exitTimeoutRef.current);
+      if (closeActionTimeoutRef.current) window.clearTimeout(closeActionTimeoutRef.current);
+    };
+  }, []);
   useEffect(() => {
     if (isOpen && task) {
+      // Ensure we mount and then generate content
+      setShouldRender(true);
+      setClosing(false);
       generateContent();
       // Focus the overlay when it opens with a small delay to ensure it's rendered
       setTimeout(() => {
@@ -30,6 +46,14 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
           overlayRef.current.focus();
         }
       }, 150);
+    } else if (!isOpen && shouldRender) {
+      // Play exit animation then unmount
+      setClosing(true);
+      if (exitTimeoutRef.current) window.clearTimeout(exitTimeoutRef.current);
+      exitTimeoutRef.current = window.setTimeout(() => {
+        setShouldRender(false);
+        setClosing(false);
+      }, ANIMATION_MS + 20);
     }
   }, [isOpen, task]);
   useEffect(() => {
@@ -60,8 +84,17 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
   };
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
-      onClose();
+      handleRequestClose();
     }
+  };
+  const handleRequestClose = () => {
+    // Play exit animation then call parent's onClose
+    setClosing(true);
+    if (closeActionTimeoutRef.current) window.clearTimeout(closeActionTimeoutRef.current);
+    closeActionTimeoutRef.current = window.setTimeout(() => {
+      closeActionTimeoutRef.current = null;
+      onClose();
+    }, ANIMATION_MS);
   };
   const copyToClipboard = async () => {
     if (content) {
@@ -122,10 +155,14 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
       URL.revokeObjectURL(url);
     }
   };
-  if (!isOpen) return null;
-  return <div className="fixed inset-0 z-40 bg-black/90 backdrop-blur-sm">
+  if (!shouldRender) return null;
+
+  const backdropClass = `fixed inset-0 z-40 bg-black/90 backdrop-blur-sm transition-opacity duration-300 ${isOpen && !closing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`;
+  const panelTransformClass = `transform transition-transform duration-300 ${isOpen && !closing ? 'translate-y-0' : 'translate-y-full'}`;
+
+  return <div className={backdropClass} aria-hidden={isOpen ? 'false' : 'true'}>
       <div className="absolute inset-0 flex items-end justify-center px-[30px]">
-        <div ref={overlayRef} tabIndex={0} onKeyDown={handleKeyDown} className="bg-zinc-900 rounded-t-2xl shadow-2xl w-full max-w-6xl h-[88vh] overflow-hidden border-t border-l border-r border-zinc-700 focus:outline-none flex flex-col py-0 my-0">
+        <div ref={overlayRef} tabIndex={0} onKeyDown={handleKeyDown} className={`${panelTransformClass} bg-zinc-900 rounded-t-2xl shadow-2xl w-full max-w-6xl h-[88vh] overflow-hidden border-t border-l border-r border-zinc-700 focus:outline-none flex flex-col py-0 my-0`} role="dialog" aria-modal="true">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-zinc-700 flex-shrink-0 py-[9px] bg-neutral-900">
             <div className="flex-1">
@@ -147,13 +184,13 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
             
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              {content && !loading && <>
-                  <button onClick={copyToClipboard} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Copy to clipboard">
+        {content && !loading && <>
+          <button onClick={copyToClipboard} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Copy to clipboard">
                     {copied ? <Check size={20} /> : <Copy size={20} />}
                   </button>
                   
                 </>}
-              <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Close">
+        <button onClick={handleRequestClose} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Close">
                 <X size={20} />
               </button>
             </div>
@@ -163,7 +200,8 @@ const AgenticModeOverlay: React.FC<AgenticModeOverlayProps> = ({
           <div ref={contentRef} className="flex-1 overflow-y-auto py-[40px] px-[110px] bg-neutral-900">
             {loading ? <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <p className="text-zinc-400 text-lg animate-pulse">
+                  <div className="loader mx-auto mb-6" aria-hidden="true" />
+                  <p className="text-zinc-400 text-lg">
                     Atlas is generating your {contentType}...
                   </p>
                   <p className="text-sm text-zinc-500 mt-2">This may take a few moments</p>

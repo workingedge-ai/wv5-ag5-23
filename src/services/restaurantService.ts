@@ -427,32 +427,25 @@ class RestaurantService {
       };
     }
 
-    // Find and click the category button
+    // Find and click the category button — rely on the app's click handler to
+    // perform any scrolling. Focus the button first to ensure keyboard
+    // navigation/focus styles are applied and that any focus-based handlers run.
     const categoryButtons = document.querySelectorAll('#categories-container button');
     let categoryClicked = false;
 
-    categoryButtons.forEach((button, index) => {
+    for (let i = 0; i < categoryButtons.length; i++) {
+      const button = categoryButtons[i];
       if (button.textContent?.toLowerCase().includes(availableCategory.toLowerCase())) {
-        (button as HTMLElement).click();
-        categoryClicked = true;
-        
-        // Scroll to the first item of this category in the menu
-        setTimeout(() => {
-          const menuContainer = document.getElementById('menu-items-container');
-          const categoryItems = this.menuItems.filter(item => item.category === availableCategory);
-          if (menuContainer && categoryItems.length > 0) {
-            const firstItemId = categoryItems[0].id;
-            const firstItemElement = document.querySelector(`#menu-items-container [id*="${firstItemId}"]`);
-            if (firstItemElement) {
-              firstItemElement.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-              });
-            }
-          }
-        }, 100);
+        try {
+          (button as HTMLElement).focus();
+          (button as HTMLElement).click();
+          categoryClicked = true;
+        } catch (err) {
+          console.error('Failed to click category button:', err);
+        }
+        break;
       }
-    });
+    }
 
     if (categoryClicked) {
       return { 

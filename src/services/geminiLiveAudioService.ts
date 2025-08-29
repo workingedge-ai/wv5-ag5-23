@@ -393,13 +393,18 @@ export class GeminiLiveAudioService {
         throw new Error('Media Devices API not supported in this browser. Please use a modern browser with HTTPS.');
       }
 
-      // Initialize audio contexts
-      this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
-        sampleRate: 16000,
-      });
-      this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
-        sampleRate: 24000,
-      });
+      // Initialize audio contexts (handle legacy webkitAudioContext without using `any`)
+      type AudioContextConstructor = new (options?: AudioContextOptions) => AudioContext;
+      interface WindowWithAudioContext extends Window {
+        webkitAudioContext?: AudioContextConstructor;
+        AudioContext?: AudioContextConstructor;
+      }
+
+      const AC = ((window as unknown) as WindowWithAudioContext).AudioContext ?? ((window as unknown) as WindowWithAudioContext).webkitAudioContext;
+      if (!AC) throw new Error('AudioContext is not supported in this environment');
+
+      this.inputAudioContext = new AC({ sampleRate: 16000 });
+      this.outputAudioContext = new AC({ sampleRate: 24000 });
       this.inputNode = this.inputAudioContext.createGain();
       this.outputNode = this.outputAudioContext.createGain();
       this.outputNode.connect(this.outputAudioContext.destination);
@@ -416,6 +421,11 @@ export class GeminiLiveAudioService {
             console.log('Connected to Gemini Live - improved function calling enabled');
             this.isConnected = true;
             this.setupAudioInput();
+
+            // Send a one-time proactive hello on first-ever connection so the assistant
+            // speaks first instead of waiting for user to say hi.
+            // We persist a flag in localStorage so this occurs only once per user/browser.
+            this.sendInitialGreetingIfNeeded();
           },
           onmessage: async (message: LiveServerMessage) => {
             console.log('Received message from Gemini:', message);
@@ -497,7 +507,10 @@ export class GeminiLiveAudioService {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Orus' } },
           },
           tools: [{ googleSearch: {} }, { functionDeclarations }],
-          systemInstruction: undefined,
+          // System instruction: make the assistant behave like a hotel room assistant,
+          // reply in the same language the user is speaking, and keep responses short
+          // and to the point.
+          systemInstruction: `You are a helpful hotel room assistant. Reply in the same language the user is speaking. Keep responses short, concise, and to the point.`,
         },
       });
 
@@ -529,7 +542,7 @@ export class GeminiLiveAudioService {
     return true;
   }
 
-  private async handleFunctionCall(toolCall: any): Promise<void> {
+  private async handleFunctionCall(toolCall: { functionCalls?: Array<{ id?: string; name?: string; args?: Record<string, unknown> }> }): Promise<void> {
     console.log('Processing function call:', toolCall);
     
     const functionCall = toolCall.functionCalls?.[0];
@@ -538,9 +551,9 @@ export class GeminiLiveAudioService {
       return;
     }
 
-    const functionName = functionCall.name;
-    const functionId = functionCall.id;
-    const args = functionCall.args || {};
+  const functionName = functionCall.name;
+  const functionId = functionCall.id;
+  const args = (functionCall.args || {}) as Record<string, unknown>;
     
     let result = { success: true, message: '' };
 
@@ -561,13 +574,15 @@ export class GeminiLiveAudioService {
       case 'navigate_to_booking':
         result = this.navigateToBooking();
         break;
-      case 'scroll_home_page':
-        result = this.scrollHomePage(args.direction);
+      case 'scroll_home_page': {
+        const dir = typeof args.direction === 'string' && (args.direction === 'up' || args.direction === 'down') ? args.direction as 'up' | 'down' : 'down';
+        result = this.scrollHomePage(dir);
         break;
+      }
       case 'stay_silent':
         result = await this.staySilent();
         break;
-      case 'open_youtube':
+  case 'open_youtube':
         result = this.openYouTube();
         this.autoMute();
         break;
@@ -583,14 +598,18 @@ export class GeminiLiveAudioService {
         result = this.openYouTubeMusic();
         this.autoMute();
         break;
-      case 'search_youtube':
-        result = this.searchYouTube(args.query);
+      case 'search_youtube': {
+        const q = typeof args.query === 'string' ? args.query : '';
+        result = this.searchYouTube(q);
         this.autoMute();
         break;
-      case 'play_youtube_video':
-        result = this.playYouTubeVideo(args.query);
+      }
+      case 'play_youtube_video': {
+        const q2 = typeof args.query === 'string' ? args.query : '';
+        result = this.playYouTubeVideo(q2);
         this.autoMute();
         break;
+      }
       case 'turn_on_smart_plug':
         result = await this.turnOnSmartPlug();
         break;
@@ -610,27 +629,45 @@ export class GeminiLiveAudioService {
         result = await this.getFanStatus();
         break;
       // Restaurant function calls
-      case 'show_restaurant_category':
-        result = this.showRestaurantCategory(args.category);
+      case 'show_restaurant_category': {
+        const cat = typeof args.category === 'string' ? args.category : '';
+        result = this.showRestaurantCategory(cat);
         break;
-      case 'add_item_to_order':
-        result = this.addItemToOrder(args.itemName, args.quantity || 1);
+      }
+      case 'add_item_to_order': {
+        const name = typeof args.itemName === 'string' ? args.itemName : '';
+        const qty = typeof args.quantity === 'number' ? args.quantity : 1;
+        result = this.addItemToOrder(name, qty);
         break;
-      case 'remove_item_from_order':
-        result = this.removeItemFromOrder(args.itemName);
+      }
+      case 'remove_item_from_order': {
+        const nameR = typeof args.itemName === 'string' ? args.itemName : '';
+        result = this.removeItemFromOrder(nameR);
         break;
-      case 'update_item_quantity':
-        result = this.updateItemQuantity(args.itemName, args.quantity);
+      }
+      case 'update_item_quantity': {
+        const nameU = typeof args.itemName === 'string' ? args.itemName : '';
+        const qtyU = typeof args.quantity === 'number' ? args.quantity : 0;
+        result = this.updateItemQuantity(nameU, qtyU);
         break;
-      case 'add_special_instructions':
-        result = this.addSpecialInstructions(args.itemName, args.instructions);
+      }
+      case 'add_special_instructions': {
+        const nameS = typeof args.itemName === 'string' ? args.itemName : '';
+        const instr = typeof args.instructions === 'string' ? args.instructions : '';
+        result = this.addSpecialInstructions(nameS, instr);
         break;
-      case 'scroll_menu':
-        result = this.scrollMenu(args.direction, args.amount || 'medium');
+      }
+      case 'scroll_menu': {
+        const dirM = typeof args.direction === 'string' && (args.direction === 'up' || args.direction === 'down') ? args.direction as 'up' | 'down' : 'down';
+        const amount = typeof args.amount === 'string' ? args.amount as 'small' | 'medium' | 'large' : 'medium';
+        result = this.scrollMenu(dirM, amount);
         break;
-      case 'place_restaurant_order':
-        result = this.placeRestaurantOrder(args.roomNumber || "202");
+      }
+      case 'place_restaurant_order': {
+        const room = typeof args.roomNumber === 'string' ? args.roomNumber : '202';
+        result = this.placeRestaurantOrder(room);
         break;
+      }
       case 'clear_restaurant_order':
         result = this.clearRestaurantOrder();
         break;
@@ -641,9 +678,12 @@ export class GeminiLiveAudioService {
         result = this.getRestaurantMenu();
         break;
       // Agentic mode function call
-      case 'activate_agentic_mode':
-        result = await this.activateAgenticMode(args.task, args.contentType);
+      case 'activate_agentic_mode': {
+        const task = typeof args.task === 'string' ? args.task : '';
+        const contentType = typeof args.contentType === 'string' ? args.contentType : '';
+        result = await this.activateAgenticMode(task, contentType);
         break;
+      }
       default:
         console.log('Unknown function call:', functionName);
         result = { success: false, message: 'Unknown function' };
@@ -1305,6 +1345,74 @@ export class GeminiLiveAudioService {
       isConnected: this.isConnected,
       isMuted: this.isMuted
     };
+  }
+
+  // Send a one-time greeting on the first connection per browser/user
+  private async sendInitialGreetingIfNeeded(): Promise<void> {
+    try {
+      const flagKey = 'gemini_live_initial_greeting_sent';
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      const sent = window.localStorage.getItem(flagKey);
+      if (sent) return; // already sent in this browser
+
+      const helloText = 'Hello! I am your hotel room assistant. How can I help you today?';
+
+      // Attempt to send a text message via the session. Different SDKs expose
+      // different methods; try a few common ones gracefully.
+      await this.sendTextToSession(helloText);
+
+      window.localStorage.setItem(flagKey, '1');
+    } catch (err) {
+      console.warn('Failed to send initial greeting:', err);
+    }
+  }
+
+  // Helper: send a text message to the live session using available APIs.
+  private async sendTextToSession(text: string): Promise<void> {
+    if (!this.session) return;
+
+    // Try common method names used by streaming/live SDKs.
+    // If none exist, send a tool response with a fake function to surface text.
+    try {
+      type LiveSessionLike = {
+        sendMessage?: (payload: { text?: string }) => Promise<unknown> | void;
+        sendText?: (text: string) => Promise<unknown> | void;
+        send?: (payload: unknown) => Promise<unknown> | void;
+        sendToolResponse?: (payload: unknown) => void;
+      };
+
+      const s = this.session as unknown as LiveSessionLike;
+
+      if (typeof s.sendMessage === 'function') {
+        await s.sendMessage({ text });
+        return;
+      }
+
+      if (typeof s.sendText === 'function') {
+        await s.sendText(text);
+        return;
+      }
+
+      if (typeof s.send === 'function') {
+        await s.send({ text });
+        return;
+      }
+
+      // Fallback: if session supports sendToolResponse, send a synthetic tool response
+      // that may be interpreted as an assistant message.
+      if (typeof s.sendToolResponse === 'function') {
+        try {
+          s.sendToolResponse({
+            functionResponses: [{ id: 'initial_greeting', name: 'initial_greeting', response: { success: true, message: text } }]
+          });
+        } catch (e) {
+          // ignore
+        }
+        return;
+      }
+    } catch (error) {
+      console.warn('Error while sending text to session:', error);
+    }
   }
 }
 

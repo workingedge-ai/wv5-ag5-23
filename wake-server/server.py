@@ -5,7 +5,7 @@ Usage:
   - Download a small Vosk model (e.g., "vosk-model-small-en-us-0.15") and set VOSK_MODEL_PATH env var or place in ./model
   - Run: python server.py
 
-This script opens the microphone and runs continuous recognition. On detecting the configured wake word (default: "hey agent"),
+This script opens the microphone and runs continuous recognition. On detecting the configured wake word (default: "hey lara"),
 it broadcasts a JSON message {"type":"wake"} to any connected websocket clients.
 
 Notes:
@@ -24,7 +24,7 @@ from vosk import Model, KaldiRecognizer
 import websockets
 
 # Configuration
-WAKE_PHRASE = os.environ.get('WAKE_PHRASE', 'hey agent')
+WAKE_PHRASE = os.environ.get('WAKE_PHRASE', 'hey pluto')
 MODEL_PATH = os.environ.get('VOSK_MODEL_PATH', './model')
 SAMPLE_RATE = 16000
 WEBSOCKET_PORT = int(os.environ.get('WEBSOCKET_PORT', 8765))
@@ -117,13 +117,10 @@ async def main():
 
     print('Loading model...')
     model = Model(MODEL_PATH)
-    # Prefer a tight grammar (only the wake phrase) to improve wake detection
-    try:
-        grammar = json.dumps([WAKE_PHRASE])
-        recognizer = KaldiRecognizer(model, SAMPLE_RATE, grammar)
-        print(f'Using Vosk grammar: {grammar}')
-    except Exception:
-        recognizer = KaldiRecognizer(model, SAMPLE_RATE)
+    # Use free-form recognition (no explicit grammar) for wake-word detection
+    # Removing the grammar here avoids strict phrase matching and lets recognizer
+    # produce full text results which we inspect for the wake phrase.
+    recognizer = KaldiRecognizer(model, SAMPLE_RATE)
 
     # Start websocket server
     ws_server = await websockets.serve(ws_handler, '0.0.0.0', WEBSOCKET_PORT)

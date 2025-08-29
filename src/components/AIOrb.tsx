@@ -639,18 +639,35 @@ const AIOrb: React.FC<AIOrbProps> = ({
   // WebSocket listener for wake-word server
   // Only connect when the AI orb is NOT actively connected and unmuted.
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: number | null = null;
+    // Keep websocket and reconnect timer in refs so cleanup always targets the
+    // currently active socket/timer even if the effect re-runs.
+    const wsRef = { current: null as WebSocket | null } as { current: WebSocket | null };
+    const reconnectRef = { current: null as number | null } as { current: number | null };
 
     const shouldBeConnected = !(isConnected && !isMuted);
 
+    const closeExisting = () => {
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+      if (wsRef.current) {
+        try { wsRef.current.close(); } catch {}
+        wsRef.current = null;
+      }
+    };
+
     const connectWs = () => {
       try {
+        closeExisting();
         const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
         const url = `ws://${host}:8765`;
-        ws = new WebSocket(url);
-        ws.onopen = () => console.log('Wake-word WS connected', url);
-        ws.onmessage = async (e) => {
+        const socket = new WebSocket(url);
+        wsRef.current = socket;
+
+        socket.onopen = () => console.log('Wake-word WS connected', url);
+
+        socket.onmessage = async (e) => {
           try {
             const msg = JSON.parse(e.data);
             if (msg.type === 'wake') {
@@ -668,7 +685,6 @@ const AIOrb: React.FC<AIOrbProps> = ({
                 try {
                   await unmute();
                 } catch (err) {
-                  // Fallback: toggle if unmute not available
                   try { await toggleMute(); } catch {}
                 }
                 return;
@@ -681,20 +697,22 @@ const AIOrb: React.FC<AIOrbProps> = ({
             console.error('Invalid WS message', err);
           }
         };
-        ws.onclose = () => {
+
+        socket.onclose = () => {
           console.log('Wake-word WS closed');
           // If we still should be connected, try to reconnect after a delay
           if (shouldBeConnected) {
-            reconnectTimer = window.setTimeout(connectWs, 5000);
+            reconnectRef.current = window.setTimeout(connectWs, 5000);
           }
         };
-        ws.onerror = (err) => {
+
+        socket.onerror = (err) => {
           console.error('Wake-word WS error', err);
-          ws?.close();
+          try { socket.close(); } catch {}
         };
       } catch (err) {
         console.error('Failed to init wake-word WS', err);
-        if (shouldBeConnected) reconnectTimer = window.setTimeout(connectWs, 5000);
+        if (shouldBeConnected) reconnectRef.current = window.setTimeout(connectWs, 5000);
       }
     };
 
@@ -702,16 +720,12 @@ const AIOrb: React.FC<AIOrbProps> = ({
     if (shouldBeConnected) {
       connectWs();
     } else {
-      // Ensure closed if AI is active
-      if (ws) {
-        try { ws.close(); } catch {};
-        ws = null;
-      }
+      // Ensure closed if AI is active/unmuted
+      closeExisting();
     }
 
     return () => {
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      closeExisting();
     };
   }, [connect, setFocused, isConnected, isMuted, unmute, toggleMute]);
 
